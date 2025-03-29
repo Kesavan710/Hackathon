@@ -148,74 +148,9 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.style.width = `${inputRect.width}px`;
     }
 
-    calculateBtn.addEventListener('click', async function() {
-        const startLocation = startInput.value.trim();
-        const endLocation = endInput.value.trim();
-
-        if (!startLocation || !endLocation) {
-            showError("Please enter both starting and ending locations.");
-            return;
-        }
-
-        try {
-            calculateBtn.disabled = true;
-            calculateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
-
-            const startCoords = await getCoordinates(startLocation);
-            const endCoords = await getCoordinates(endLocation);
-
-            const distanceKm = await getDistance(startCoords, endCoords);
-            const co2Emission = calculateCO2(distanceKm, currentTransport);
-
-            displayResults(distanceKm, co2Emission);
-            showRandomEcoTip();
-            saveTransportData(distanceKm);  
-
-            async function saveTransportData(distance) {
-                const userId = localStorage.getItem("user_id"); // Assuming user ID is stored after login
-                if (!userId) {
-                    console.error("User not logged in.");
-                    return;
-                }
-            
-                const transportData = {
-                    user_id: parseInt(userId),
-                    transport_type: currentTransport,
-                    distance: Math.round(distance)
-                };
-            
-                try {
-                    const response = await fetch("http://localhost:8000/transport", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(transportData)
-                    });
-            
-                    const result = await response.json();
-                    console.log("Transport data saved:", result);
-                } catch (error) {
-                    console.error("Error saving transport data:", error);
-                }
-            }
-            
-            
-            // Scroll to results
-            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-        } catch (error) {
-            console.error("Error:", error);
-            showError(error.message || "Failed to calculate route. Please try again.");
-        } finally {
-            calculateBtn.disabled = false;
-            calculateBtn.innerHTML = '<i class="fas fa-calculator"></i> Calculate Emissions';
-        }
-    });
-
     async function getCoordinates(location) {
         const response = await fetch(
-            `${LOCATIONIQ_API_URL}/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(location)}&format=json&limit=1`
+           ` ${LOCATIONIQ_API_URL}/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(location)}&format=json&limit=1`
         );
         
         if (!response.ok) {
@@ -225,71 +160,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await response.json();
         
         if (!data[0]?.lat || !data[0]?.lon) {
-            throw new Error(`"${location}" not found. Try "City, Country" format`);
+            throw new Error(`"${location}" not found. Try "City, Country" format.`);
         }
         
         return {
             lat: parseFloat(data[0].lat),
             lon: parseFloat(data[0].lon)
         };
-    }
-
-    async function getDistance(startCoords, endCoords) {
-        const response = await fetch(
-            `${LOCATIONIQ_API_URL}/directions/driving/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?key=${LOCATIONIQ_API_KEY}&overview=false`
-        );
-        
-        if (!response.ok) {
-            throw new Error(`Routing service unavailable (${response.status})`);
-        }
-        
-        const data = await response.json();
-        
-        if (!data.routes || data.routes.length === 0) {
-            throw new Error("No route found between these locations");
-        }
-        
-        return data.routes[0].distance / 1000; // Convert to km
-    }
-
-    function calculateCO2(distance, transport) {
-        return distance * emissionFactors[transport];
-    }
-
-    function displayResults(distance, emission) {
-        distanceSpan.textContent = distance.toFixed(1);
-        emissionSpan.textContent = emission.toFixed(2);
-        
-        // Create comparison text
-        let comparison = "";
-        if (currentTransport === 'car') {
-            const trainEmission = calculateCO2(distance, 'train');
-            comparison = `Taking the train would save ${(emission - trainEmission).toFixed(1)} kg CO₂ on this trip!`;
-        } else if (currentTransport === 'airplane') {
-            const trainEmission = calculateCO2(distance, 'train');
-            comparison = `Taking the train would save ${(emission - trainEmission).toFixed(1)} kg CO₂ on this trip!`;
-        } else if (currentTransport === 'train') {
-            comparison = "Great choice! Trains are one of the most eco-friendly ways to travel.";
-        } else if (currentTransport === 'bicycle' || currentTransport === 'walking') {
-            comparison = "Zero emissions! You're helping keep our planet clean.";
-        }
-        
-        comparisonText.textContent = comparison;
-        resultDiv.classList.remove('hidden');
-    }
-
-    function showRandomEcoTip() {
-        const randomTip = ecoTips[Math.floor(Math.random() * ecoTips.length)];
-        ecoTipText.textContent = randomTip;
-    }
-
-    function showError(message) {
-        resultDiv.innerHTML = `
-            <div class="error-message">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>${message}</p>
-            </div>
-        `;
-        resultDiv.classList.remove('hidden');
     }
 });
