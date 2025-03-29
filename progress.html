@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Emissions Report | Carbon Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-light: #81C784;
+            --primary-dark: #388E3C;
+            --secondary: #2196F3;
+            --accent: #FFC107;
+            --dark: #263238;
+            --light: #ECEFF1;
+            --text: #37474F;
+            --text-light: #607D8B;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --card-radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo i {
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .logo h1 {
+            font-weight: 700;
+            font-size: 24px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .time-filter {
+            display: flex;
+            gap: 10px;
+        }
+
+        .time-btn {
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: none;
+            background: white;
+            color: var(--text-light);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .time-btn.active {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .time-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--card-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .card-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-subtext {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+
+        .trend {
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 50px;
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--primary-dark);
+        }
+
+        .trend.up {
+            background: rgba(244, 67, 54, 0.1);
+            color: #F44336;
+        }
+
+        .trend i {
+            margin-right: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .summary-card {
+            grid-column: span 4;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .daily-card {
+            grid-column: span 8;
+        }
+
+        .monthly-card, .yearly-card {
+            grid-column: span 6;
+        }
+
+        .transport-breakdown {
+            grid-column: span 12;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .source-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .source-info {
+            flex: 1;
+        }
+
+        .source-name {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .source-stats {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            width: 100%;
+            background: var(--light);
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            transition: width 0.5s ease;
+        }
+
+        .transport-key {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .key-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 10px;
+        }
+
+        .key-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .summary-card, .daily-card, 
+            .monthly-card, .yearly-card,
+            .transport-breakdown {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-card, .daily-card, 
+            .monthly-card, .yearly-card,
+            .transport-breakdown {
+                grid-column: span 1;
+            }
+            
+            .time-filter {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i>🌱</i>
+                <h1>CarbonTrack</h1>
+            </div>
+            <div class="time-filter">
+                <button class="time-btn active" data-period="week">This Week</button>
+                <button class="time-btn" data-period="month">This Month</button>
+                <button class="time-btn" data-period="year">This Year</button>
+                <button class="time-btn" data-period="all">All Time</button>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <!-- Summary Card -->
+            <div class="card summary-card">
+                <div class="card-header">
+                    <div class="card-title">Transport Summary</div>
+                    <div class="trend">
+                        <i>📉</i> 8% decrease
+                    </div>
+                </div>
+                <div class="card-value">18.6 kg</div>
+                <div class="card-subtext">CO₂ from transport this week</div>
+                
+                <div style="flex: 1;"></div>
+                
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Weekly Goal (25 kg)</span>
+                        <span>74%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 74%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Transport Card -->
+            <div class="card daily-card">
+                <div class="card-header">
+                    <div class="card-title">Daily Transport Emissions</div>
+                    <div class="trend down">
+                        <i>📉</i> 5% decrease
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly Transport Card -->
+            <div class="card monthly-card">
+                <div class="card-header">
+                    <div class="card-title">Monthly Transport Trends</div>
+                    <div class="trend">
+                        <i>📉</i> 12% decrease
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Yearly Transport Card -->
+            <div class="card yearly-card">
+                <div class="card-header">
+                    <div class="card-title">Yearly Transport Comparison</div>
+                    <div class="trend">
+                        <i>📉</i> 18% decrease
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="yearlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Transport Breakdown -->
+            <div class="card transport-breakdown">
+                <div class="card-header">
+                    <div class="card-title">Transportation Breakdown (kg CO₂)</div>
+                    <div class="trend">
+                        <i>📉</i> 10% decrease
+                    </div>
+                </div>
+                
+                <div class="source-item">
+                    <div class="source-icon">🚗</div>
+                    <div class="source-info">
+                        <div class="source-name">Car (Petrol)</div>
+                        <div class="source-stats">
+                            <span>8.2 kg</span>
+                            <span>44% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 44%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="source-item">
+                    <div class="source-icon">✈️</div>
+                    <div class="source-info">
+                        <div class="source-name">Plane (Short-haul)</div>
+                        <div class="source-stats">
+                            <span>5.1 kg</span>
+                            <span>27% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 27%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="source-item">
+                    <div class="source-icon">🚌</div>
+                    <div class="source-info">
+                        <div class="source-name">Bus</div>
+                        <div class="source-stats">
+                            <span>2.3 kg</span>
+                            <span>12% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 12%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="source-item">
+                    <div class="source-icon">🚆</div>
+                    <div class="source-info">
+                        <div class="source-name">Train</div>
+                        <div class="source-stats">
+                            <span>1.5 kg</span>
+                            <span>8% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 8%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="source-item">
+                    <div class="source-icon">🏍️</div>
+                    <div class="source-info">
+                        <div class="source-name">Motorcycle</div>
+                        <div class="source-stats">
+                            <span>0.8 kg</span>
+                            <span>4% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 4%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-icon">🚲</div>
+                    <div class="source-info">
+                        <div class="source-name">Bicycle</div>
+                        <div class="source-stats">
+                            <span>0.4 kg</span>
+                            <span>2% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 2%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-icon">🚶</div>
+                    <div class="source-info">
+                        <div class="source-name">Walking</div>
+                        <div class="source-stats">
+                            <span>0.3 kg</span>
+                            <span>2% of transport</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 2%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-key">
+                    <div class="key-item">
+                        <div class="key-color" style="background: #4CAF50;"></div>
+                        <span>Low Emission (0-1 kg)</span>
+                    </div>
+                    <div class="key-item">
+                        <div class="key-color" style="background: #FFC107;"></div>
+                        <span>Medium Emission (1-5 kg)</span>
+                    </div>
+                    <div class="key-item">
+                        <div class="key-color" style="background: #F44336;"></div>
+                        <span>High Emission (5+ kg)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Time period filter
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                updateCharts(this.dataset.period);
+            });
+        });
+
+        // Sample transport data in kg
+        const transportData = {
+            week: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                data: [4.2, 3.8, 4.1, 3.9, 4.5, 5.1, 4.3],
+                avg: 4.27,
+                modes: {
+                    car: [2.1, 1.9, 2.0, 1.8, 2.3, 2.8, 2.1],
+                    plane: [1.2, 1.0, 1.1, 1.3, 1.2, 1.5, 1.4],
+                    bus: [0.6, 0.6, 0.7, 0.5, 0.7, 0.5, 0.5],
+                    train: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
+                    motorcycle: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                    bicycle: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05],
+                    walk: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+                }
+            },
+            month: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                data: [18.2, 17.5, 16.8, 15.4],
+                avg: 17.0
+            },
+            year: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                data: [85, 78, 72, 68, 65, 62, 66, 60, 58, 55, 59, 56],
+                avg: 65.5
+            }
+        };
+
+        // Chart configurations
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleFont: {
+                        family: 'Montserrat',
+                        size: 14,
+                        weight: '600'
+                    },
+                    bodyFont: {
+                        family: 'Montserrat',
+                        size: 12
+                    },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.parsed.y} kg CO₂`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#607D8B'
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        color: '#607D8B',
+                        callback: function(value) {
+                            return value + ' kg';
+                        }
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 5,
+                    backgroundColor: '#4CAF50',
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    hoverRadius: 7
+                },
+                line: {
+                    tension: 0.3,
+                    borderWidth: 3,
+                    borderColor: '#4CAF50'
+                }
+            }
+        };
+
+        // Initialize charts
+        const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+        const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+        const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
+
+        const dailyChart = new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: transportData.week.labels,
+                datasets: [{
+                    data: transportData.week.data,
+                    fill: {
+                        target: 'origin',
+                        above: 'rgba(76, 175, 80, 0.1)'
+                    }
+                }]
+            },
+            options: chartOptions
+        });
+
+        const monthlyChart = new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+                labels: transportData.month.labels,
+                datasets: [{
+                    data: transportData.month.data,
+                    backgroundColor: '#4CAF50',
+                    borderRadius: 6
+                }]
+            },
+            options: chartOptions
+        });
+
+        const yearlyChart = new Chart(yearlyCtx, {
+            type: 'line',
+            data: {
+                labels: transportData.year.labels,
+                datasets: [{
+                    data: transportData.year.data,
+                    fill: {
+                        target: 'origin',
+                        above: 'rgba(76, 175, 80, 0.1)'
+                    }
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Update charts based on selected time period
+        function updateCharts(period) {
+            // In a real app, you would fetch new data from the server here
+            console.log('Updating transport charts for period:', period);
+            
+            // For demo purposes, we'll just animate the charts
+            dailyChart.data.datasets[0].data = dailyChart.data.datasets[0].data.map(() => 
+                Math.random() * 3 + 2
+            );
+            dailyChart.update();
+            
+            monthlyChart.data.datasets[0].data = monthlyChart.data.datasets[0].data.map(() => 
+                Math.random() * 5 + 15
+            );
+            monthlyChart.update();
+            
+            yearlyChart.data.datasets[0].data = yearlyChart.data.datasets[0].data.map(() => 
+                Math.random() * 10 + 50
+            );
+            yearlyChart.update();
+        }
+    </script>
+</body>
+</html>
